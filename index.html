@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Doomz.io (sanitized)</title>
+  <style>
+    html, body { height: 100%; margin: 0; background: #111; overflow: hidden; }
+    #unityContainer { width: 100%; height: 100%; position: relative; }
+    canvas { width: 100% !important; height: 100% !important; display: block; }
+  </style>
+</head>
+<body>
+  <div id="unityContainer"></div>
+
+  <!-- Minimal chat sanitizer (replaces < > with [ ]) -->
+  <script src="chat_sanitize.js"></script>
+
+  <!-- Unity loader (must exist in your build folder) -->
+  <script src="doomz.js"></script>
+  <script>
+    UnityLoader.instantiate("unityContainer", "doomz.json", {});
+  </script>
+</body>
+</html>
