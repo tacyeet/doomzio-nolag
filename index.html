@@ -5,88 +5,255 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Doomz.io (sanitized)</title>
   <style>
-    html, body { height: 100%; margin: 0; background: #111; overflow: hidden; }
-    #layout { height: 100%; width: 100%; display: flex; }
-    #unityContainer { flex: 1 1 auto; position: relative; min-width: 0; }
-    canvas { width: 100% !important; height: 100% !important; display: block; }
+    :root{
+      --bg:#0b0d12;
+      --game:#0b0d12;
+      --panel:#0f1420;
+      --panel2:#0c101a;
+      --border:rgba(255,255,255,.10);
+      --border2:rgba(255,255,255,.14);
+      --text:rgba(255,255,255,.90);
+      --muted:rgba(255,255,255,.66);
+      --muted2:rgba(255,255,255,.52);
+      --accent:#7c5cff;
+      --accent2:#34d1ff;
+      --shadow:0 18px 45px rgba(0,0,0,.45);
+      --radius:18px;
+    }
+    html, body { height:100%; margin:0; background:var(--game); overflow:hidden; color:var(--text);
+      font-family:system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, sans-serif; }
 
-    /* Discord sidebar */
-    #discordSidebar {
-      width: 350px;
-      height: 100%;
-      flex: 0 0 350px;
-      background: #0e0f12;
-      border-left: 1px solid rgba(255,255,255,0.10);
-      display: flex;
-      flex-direction: column;
-    }
-    #discordHeader {
-      padding: 10px 10px 8px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      color: #ddd;
-      font: 12px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, sans-serif;
-    }
-    #discordHeader b { font-size: 12px; letter-spacing: 0.3px; }
-    #discordButtons { display: flex; gap: 6px; }
-    .btn {
-      appearance: none;
-      border: 1px solid rgba(255,255,255,0.15);
-      background: rgba(255,255,255,0.06);
-      color: #ddd;
-      padding: 4px 8px;
-      border-radius: 8px;
-      cursor: pointer;
-      font: 12px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, sans-serif;
-    }
-    .btn:hover { background: rgba(255,255,255,0.10); }
+    #layout{ height:100%; width:100%; display:flex; }
+    #unityContainer{ flex:1 1 auto; position:relative; min-width:0; }
+    canvas{ width:100% !important; height:100% !important; display:block; }
 
-    #discordFrameWrap {
-      flex: 1 1 auto;
-      min-height: 0;
-      padding: 0 10px 10px;
+    /* Sidebar shell */
+    #discordSidebar{
+      width:380px;
+      flex:0 0 380px;
+      height:100%;
+      display:flex;
+      flex-direction:column;
+      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0)), var(--panel2);
+      border-left:1px solid var(--border);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+      transition: transform 180ms ease, opacity 180ms ease;
     }
-    #discordFrame {
-      width: 100%;
-      height: 100%;
-      border: 0;
-      border-radius: 10px;
-      background: transparent;
+    body.discord-collapsed #discordSidebar{
+      transform: translateX(380px);
+      opacity:0;
+      pointer-events:none;
+    }
+    @media (max-width: 1020px){
+      #discordSidebar{ display:none; }
+      #discordTogglePill{ display:none !important; }
     }
 
-    /* If screen is too narrow, hide sidebar automatically */
-    @media (max-width: 920px) {
-      #discordSidebar { display: none; }
+    /* Reopen pill (not permanent) */
+    #discordTogglePill{
+      position:absolute; top:14px; right:14px; z-index:9999;
+      display:none; align-items:center; gap:10px;
+      padding:10px 12px;
+      border-radius:999px;
+      border:1px solid var(--border2);
+      background:rgba(15,20,32,.78);
+      backdrop-filter: blur(10px);
+      box-shadow: var(--shadow);
+      cursor:pointer;
+      user-select:none;
+      font-size:12px;
+    }
+    #discordTogglePill .dot{
+      width:9px; height:9px; border-radius:999px;
+      background: var(--accent);
+      box-shadow:0 0 0 3px rgba(124,92,255,.20);
+    }
+    body.discord-collapsed #discordTogglePill{ display:flex; }
+
+    /* Beautiful embed card */
+    #cardWrap{ padding:14px; display:flex; flex-direction:column; gap:12px; min-height:0; }
+    .card{
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      background: radial-gradient(120% 100% at 10% 0%, rgba(124,92,255,.28) 0%, rgba(124,92,255,.08) 40%, rgba(0,0,0,0) 70%),
+                  radial-gradient(130% 110% at 90% 20%, rgba(52,209,255,.22) 0%, rgba(52,209,255,.06) 35%, rgba(0,0,0,0) 70%),
+                  rgba(15,20,32,.72);
+      box-shadow: var(--shadow);
+      overflow:hidden;
     }
 
-    /* Collapsed mode */
-    body.discord-collapsed #discordSidebar { display: none; }
+    /* Header */
+    #hero{
+      padding:14px 14px 12px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
+    }
+    #heroTop{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+    #titleBlock{ min-width:0; }
+    #guildName{
+      font-size:16px; font-weight:800; letter-spacing:.2px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    #tagline{
+      margin-top:3px;
+      color: var(--muted);
+      font-size:12px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    #statsRow{ margin-top:10px; display:flex; gap:10px; flex-wrap:wrap; }
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:7px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      font-size:12px;
+      color: var(--text);
+    }
+    .pill .live{
+      width:8px; height:8px; border-radius:999px;
+      background: #39ff88;
+      box-shadow: 0 0 0 3px rgba(57,255,136,.14);
+    }
+
+    /* Buttons */
+    .btnRow{ display:flex; gap:10px; align-items:center; }
+    .btn{
+      appearance:none;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.07);
+      color: var(--text);
+      padding:8px 10px;
+      border-radius: 12px;
+      cursor:pointer;
+      font-size:12px;
+      line-height:1;
+    }
+    .btn:hover{ background: rgba(255,255,255,.11); }
+    .btnPrimary{
+      border:1px solid rgba(124,92,255,.55);
+      background: rgba(124,92,255,.22);
+      font-weight:700;
+    }
+    .btnPrimary:hover{ filter: brightness(1.1); }
+
+    /* Online preview strip */
+    #avatarStrip{ padding:12px 14px 0; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+    .avatar{
+      width:26px; height:26px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      object-fit:cover;
+      transition: transform 120ms ease;
+    }
+    .avatar:hover{ transform: translateY(-1px) scale(1.03); }
+    #moreText{ color: var(--muted2); font-size:12px; margin-left:2px; }
+
+    /* Member list */
+    #listWrap{
+      padding:10px 14px 14px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      min-height:0;
+    }
+    #listTitle{
+      display:flex; align-items:center; justify-content:space-between;
+      color: var(--muted);
+      font-size:12px;
+    }
+    #members{
+      border:1px solid rgba(255,255,255,.08);
+      background: rgba(0,0,0,.14);
+      border-radius: 14px;
+      overflow:auto;
+      max-height: calc(100vh - 310px);
+    }
+    .member{
+      display:flex; align-items:center; gap:10px;
+      padding:9px 10px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+    }
+    .member:last-child{ border-bottom:none; }
+    .mDot{
+      width:8px; height:8px; border-radius:999px;
+      background:#39ff88;
+      box-shadow:0 0 0 3px rgba(57,255,136,.12);
+      flex:0 0 auto;
+    }
+    .mName{
+      font-size:13px;
+      color: var(--text);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .mGame{
+      margin-left:auto;
+      font-size:12px;
+      color: var(--muted2);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      max-width: 45%;
+    }
+
+    /* Bottom join bar */
+    #footer{
+      margin-top:10px;
+      padding:12px 14px;
+      border-top:1px solid rgba(255,255,255,.08);
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      background: rgba(255,255,255,.03);
+    }
+    #footerHint{
+      color: var(--muted);
+      font-size:12px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
   </style>
 </head>
+
 <body>
   <div id="layout">
-    <div id="unityContainer"></div>
-
-    <!-- Discord server widget sidebar -->
-    <aside id="discordSidebar" aria-label="Discord server widget">
-      <div id="discordHeader">
-        <b>Doomz Discord</b>
-        <div id="discordButtons">
-          <button class="btn" id="btnJoin" title="Open invite in a new tab">Join</button>
-          <button class="btn" id="btnHide" title="Hide sidebar">Hide</button>
-        </div>
+    <div id="unityContainer">
+      <div id="discordTogglePill" title="Show Discord panel">
+        <span class="dot"></span>
+        <span>Discord</span>
       </div>
-      <div id="discordFrameWrap">
-        <iframe
-          id="discordFrame"
-          src="https://discord.com/widget?id=1457850861035458704&theme=dark"
-          allowtransparency="true"
-          sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
-          referrerpolicy="no-referrer"
-          loading="lazy">
-        </iframe>
+    </div>
+
+    <aside id="discordSidebar" aria-label="Discord server panel">
+      <div id="cardWrap" style="min-height:0">
+        <div class="card" style="display:flex; flex-direction:column; min-height:0">
+          <div id="hero">
+            <div id="heroTop">
+              <div id="titleBlock">
+                <div id="guildName">Doomz.io 2</div>
+                <div id="tagline">Official community • events • updates • squads</div>
+              </div>
+              <div class="btnRow">
+                <button class="btn" id="btnHide">Hide</button>
+              </div>
+            </div>
+
+            <div id="statsRow">
+              <span class="pill"><span class="live"></span><span id="onlineCount">Online: …</span></span>
+              <span class="pill" id="widgetState">Widget: live</span>
+            </div>
+          </div>
+
+          <div id="avatarStrip" aria-label="Online members preview"></div>
+
+          <div id="listWrap">
+            <div id="listTitle">
+              <span>Online now</span>
+              <span id="updatedAt"></span>
+            </div>
+            <div id="members" role="list" aria-label="Online members list"></div>
+
+            <div id="footer">
+              <div id="footerHint">Join Doomz.io 2 on Discord</div>
+              <button class="btn btnPrimary" id="joinBtn">Join Discord</button>
+            </div>
+          </div>
+        </div>
       </div>
     </aside>
   </div>
@@ -96,27 +263,129 @@
 
   <!-- Unity loader -->
   <script src="doomz.js"></script>
+
   <script>
     const inviteUrl = "https://discord.com/invite/doomzio";
+    const widgetJsonUrl = "https://discord.com/api/guilds/1457850861035458704/widget.json";
 
-    document.getElementById("btnJoin").addEventListener("click", () => {
+    const onlineCountEl = document.getElementById("onlineCount");
+    const widgetStateEl = document.getElementById("widgetState");
+    const avatarStripEl = document.getElementById("avatarStrip");
+    const membersEl = document.getElementById("members");
+    const updatedAtEl = document.getElementById("updatedAt");
+
+    const setCollapsed = (v) => document.body.classList.toggle("discord-collapsed", !!v);
+
+    document.getElementById("btnHide").addEventListener("click", () => setCollapsed(true));
+    document.getElementById("discordTogglePill").addEventListener("click", () => setCollapsed(false));
+    document.getElementById("joinBtn").addEventListener("click", () => {
       window.open(inviteUrl, "_blank", "noopener,noreferrer");
     });
 
-    document.getElementById("btnHide").addEventListener("click", () => {
-      document.body.classList.add("discord-collapsed");
-    });
+    // Auto-hide when we detect entering gameplay — not permanent; user can reopen.
+    window.addEventListener("doomz:enteredGame", () => setCollapsed(true));
 
-    // Hide sidebar once we detect we've entered gameplay (no fullscreen/pointerlock needed)
-    window.addEventListener("doomz:enteredGame", () => {
-      document.body.classList.add("discord-collapsed");
-    });
-
-    // Optional: also hide if a flag is already set (in case event fired early)
-    if (window.__doomzEnteredGame) {
-      document.body.classList.add("discord-collapsed");
+    function fmtTime(d){
+      const hh = String(d.getHours()).padStart(2,'0');
+      const mm = String(d.getMinutes()).padStart(2,'0');
+      return `${hh}:${mm}`;
     }
 
+    function clearChildren(el){
+      while(el.firstChild) el.removeChild(el.firstChild);
+    }
+
+    function renderWidget(data){
+      // Presence count (online)
+      if (typeof data?.presence_count === "number") {
+        onlineCountEl.textContent = `Online: ${data.presence_count}`;
+      } else {
+        onlineCountEl.textContent = "Online: ?";
+      }
+
+      // Online members list (only online are provided by widget)
+      const members = Array.isArray(data?.members) ? data.members : [];
+
+      // Avatar strip
+      clearChildren(avatarStripEl);
+      const maxAvatars = 12;
+      for (let i = 0; i < Math.min(maxAvatars, members.length); i++) {
+        const m = members[i];
+        const img = document.createElement("img");
+        img.className = "avatar";
+        img.alt = m.username || "member";
+        img.title = m.username || "";
+        img.src = m.avatar_url || "";
+        avatarStripEl.appendChild(img);
+      }
+      if (members.length > maxAvatars) {
+        const more = document.createElement("span");
+        more.id = "moreText";
+        more.textContent = `+${members.length - maxAvatars} more`;
+        avatarStripEl.appendChild(more);
+      }
+
+      // Member rows
+      clearChildren(membersEl);
+      if (members.length === 0) {
+        const row = document.createElement("div");
+        row.className = "member";
+        row.innerHTML = `<span style="color: rgba(255,255,255,.60); font-size:12px;">Nobody online (or widget disabled)</span>`;
+        membersEl.appendChild(row);
+      } else {
+        // Sort: alphabetical
+        members.sort((a,b) => (a.username||"").localeCompare(b.username||""));
+        for (const m of members) {
+          const row = document.createElement("div");
+          row.className = "member";
+          const game = (m.game && typeof m.game === "string") ? m.game : "";
+          row.innerHTML = `
+            <span class="mDot" aria-hidden="true"></span>
+            <span class="mName">${escapeHtml(m.username || "member")}</span>
+            <span class="mGame">${escapeHtml(game)}</span>
+          `;
+          membersEl.appendChild(row);
+        }
+      }
+
+      updatedAtEl.textContent = `Updated ${fmtTime(new Date())}`;
+      widgetStateEl.textContent = "Widget: live";
+    }
+
+    function escapeHtml(s){
+      return String(s)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#39;");
+    }
+
+    async function refreshDiscordWidget(){
+      try{
+        const res = await fetch(widgetJsonUrl, { cache: "no-store" });
+        if(!res.ok) throw new Error("bad status");
+        const data = await res.json();
+        renderWidget(data);
+      }catch(e){
+        widgetStateEl.textContent = "Widget: unavailable";
+        onlineCountEl.textContent = "Online: ?";
+        updatedAtEl.textContent = "";
+        clearChildren(avatarStripEl);
+        clearChildren(membersEl);
+        const row = document.createElement("div");
+        row.className = "member";
+        row.innerHTML = `<span style="color: rgba(255,255,255,.60); font-size:12px;">Discord widget.json not reachable.</span>`;
+        membersEl.appendChild(row);
+      }
+    }
+
+    // Start shown every time (nothing permanent)
+    setCollapsed(false);
+    refreshDiscordWidget();
+    setInterval(refreshDiscordWidget, 30000);
+
+    // Boot Unity
     UnityLoader.instantiate("unityContainer", "doomz.json", {});
   </script>
 </body>
