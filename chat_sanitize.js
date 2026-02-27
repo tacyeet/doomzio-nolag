@@ -1,36 +1,29 @@
 /*
-  Doomz.io WebGL chat sanitizer (minimal + enter-game detector)
-
-  - Replaces '<' -> '[' and '>' -> ']' inside incoming chat payload bytes
-  - Forces ws.binaryType = "arraybuffer"
-  - Intercepts ws.onmessage and addEventListener("message", ...)
-
-  Enter-game detector (since Doomz doesn't fullscreen/pointerlock):
-  - After a warmup, if we see non-chat binary packets (especially larger ones) in a burst,
-    we assume we're in-match and fire:
-      window.__doomzEnteredGame = true
-      window.dispatchEvent(new CustomEvent("doomz:enteredGame", ...))
+  Doomz.io WebGL chat sanitizer + entered-game detector
 */
 
 (() => {
   const SANITIZE_INCOMING_CHAT = true;
 
-  // Signature observed in Doomz chat packets: 7a 00 01 73 00 [type] [ASCII chat...]
+  // Observed chat signature in Doomz packets: 7a 00 01 73 00 [type] [ASCII chat...]
   const CHAT_SIG = new Uint8Array([0x7a, 0x00, 0x01, 0x73, 0x00]);
 
   // ---- Enter-game detection tuning ----
-  const ENTER_WARMUP_MS = 18000;       // don't trigger during load
+  const ENTER_WARMUP_MS = 2500;
   const NONCHAT_SIZE_TRIGGER = 90;    // bytes
   const BURST_WINDOW_MS = 300;        // window to count sends
   const BURST_COUNT_TRIGGER = 8;      // if >= this many non-chat sends in window
 
   window.__doomzEnteredGame = false;
   const __doomzStart = performance.now();
-
-  let __nonchatSendTimes = []; // timestamps (ms) of non-chat sends
+  let __nonchatSendTimes = [];
 
   function __doomzMaybeEnteredGame(reason) {
     if (window.__doomzEnteredGame) return;
+
+    // Must be armed by page (prevents premature triggers during boot)
+    if (!window.__doomzEnterArmed) return;
+
     if (performance.now() - __doomzStart < ENTER_WARMUP_MS) return;
 
     window.__doomzEnteredGame = true;
@@ -58,10 +51,48 @@
     }
   }
 
+  // Case-insensitive ASCII "quad" search inside [msgStart .. null]
+  function msgContainsQuad(u8, msgStart) {
+    // Looking for q u a d in any case:
+    // q/Q = 0x71/0x51, etc. We'll lowercase by OR 0x20 for A-Z.
+    const q = 0x71, u = 0x75, a = 0x61, d = 0x64;
+
+    let window4 = [];
+    let i = msgStart;
+
+    while (i < u8.length && u8[i] !== 0x00) {
+      let c = u8[i];
+
+      // Lowercase ASCII if A-Z
+      if (c >= 0x41 && c <= 0x5A) c = c | 0x20;
+
+      window4.push(c);
+      if (window4.length > 4) window4.shift();
+
+      if (window4.length === 4) {
+        if (window4[0] === q && window4[1] === u && window4[2] === a && window4[3] === d) {
+          return true;
+        }
+      }
+      i++;
+    }
+    return false;
+  }
+
+  function msgHasAngleBrackets(u8, msgStart) {
+    let i = msgStart;
+    while (i < u8.length && u8[i] !== 0x00) {
+      const b = u8[i];
+      if (b === 0x3C || b === 0x3E) return true;
+      i++;
+    }
+    return false;
+  }
+
   function maybeSanitizeArrayBuffer(buf) {
     if (!SANITIZE_INCOMING_CHAT || !(buf instanceof ArrayBuffer)) return;
-    const u8 = new Uint8Array(buf);
 
+    const u8 = new Uint8Array(buf);
     const pos = findSig(u8, CHAT_SIG);
     if (pos === -1) return;
 
@@ -69,13 +100,13 @@
     const msgStart = typePos + 1;
     if (msgStart >= u8.length) return;
 
-    // Only sanitize if we see < or > in the message span.
-    for (let i = msgStart; i < u8.length && u8[i] !== 0x00; i++) {
-      if (u8[i] === 0x3C || u8[i] === 0x3E) {
-        sanitizeChatInPlace(u8, msgStart);
-        break;
-      }
-    }
+    // Only sanitize if:
+    // 1) message contains "quad" (anywhere), and
+    // 2) message contains < or >
+    if (!msgContainsQuad(u8, msgStart)) return;
+    if (!msgHasAngleBrackets(u8, msgStart)) return;
+
+    sanitizeChatInPlace(u8, msgStart);
   }
 
   function wrapMessageHandler(fn) {
@@ -84,7 +115,7 @@
         if (ev && ev.data instanceof ArrayBuffer) {
           maybeSanitizeArrayBuffer(ev.data);
         } else if (ev && ev.data && ev.data instanceof Blob) {
-          // If some code forces Blob, convert to ArrayBuffer and forward
+          // If something forces Blob, convert to ArrayBuffer and forward
           const orig = ev.data;
           orig.arrayBuffer().then((ab) => {
             maybeSanitizeArrayBuffer(ab);
@@ -105,21 +136,18 @@
   }
 
   function isChatPacket(u8) {
-    const pos = findSig(u8, CHAT_SIG);
-    return pos !== -1;
+    return findSig(u8, CHAT_SIG) !== -1;
   }
 
   function noteNonChatSend(len) {
     const t = performance.now();
     __nonchatSendTimes.push(t);
 
-    // prune old
     const cutoff = t - BURST_WINDOW_MS;
     while (__nonchatSendTimes.length && __nonchatSendTimes[0] < cutoff) {
       __nonchatSendTimes.shift();
     }
 
-    // Trigger either by size or by burst rate
     if (len >= NONCHAT_SIZE_TRIGGER) {
       __doomzMaybeEnteredGame(`send_nonchat_big_${len}`);
       return;
@@ -137,7 +165,6 @@
 
     try { ws.binaryType = "arraybuffer"; } catch {}
 
-    // Detect entering game based on outgoing traffic
     const origSend = ws.send.bind(ws);
     ws.send = function(data) {
       try {
