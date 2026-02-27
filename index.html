@@ -70,17 +70,31 @@
       overflow: hidden;
     }
 
-    /* Banner-ish top */
     #banner {
-      height: 86px;
+      height: 92px;
+      background: rgba(0,0,0,.10);
+      border-bottom: 1px solid rgba(255,255,255,.10);
       position: relative;
-      background:
-        linear-gradient(90deg, rgba(124,92,255,.32), rgba(242,201,76,.18)),
-        radial-gradient(120% 140% at 20% 20%, rgba(124,92,255,.35), rgba(0,0,0,0) 60%),
-        radial-gradient(140% 120% at 90% 60%, rgba(242,201,76,.20), rgba(0,0,0,0) 65%),
-        rgba(0,0,0,.18);
+      overflow: hidden;
     }
-    /* Optional real banner file: put discord_banner.webp in repo root */
+    #bannerImg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scale(1.02);
+      filter: saturate(1.05) contrast(1.05);
+    }
+    #bannerFade {
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(180deg, rgba(0,0,0,.12), rgba(0,0,0,.35)),
+        radial-gradient(120% 100% at 10% 0%, rgba(124,92,255,.18), transparent 60%),
+        radial-gradient(130% 110% at 90% 20%, rgba(77,163,255,.18), transparent 60%);
+      pointer-events: none;
+    }
     #banner::after{
       content:"";
       position:absolute; inset:0;
