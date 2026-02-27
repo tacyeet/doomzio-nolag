@@ -9,7 +9,7 @@
   const CHAT_SIG = new Uint8Array([0x7a, 0x00, 0x01, 0x73, 0x00]);
 
   // ---- Enter-game detection tuning ----
-  const ENTER_WARMUP_MS = 2500;
+  const ENTER_WARMUP_MS = 6500;
   const NONCHAT_SIZE_TRIGGER = 90;    // bytes
   const BURST_WINDOW_MS = 300;        // window to count sends
   const BURST_COUNT_TRIGGER = 8;      // if >= this many non-chat sends in window
